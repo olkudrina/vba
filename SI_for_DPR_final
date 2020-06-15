@@ -1,0 +1,256 @@
+Function GetHTML(url As String) As String
+    With CreateObject("MSXML2.XMLHTTP")
+        .Open "GET", url, False
+        .send
+        GetHTML = .responseText
+    End With
+End Function
+
+Sub Daily_report_final()
+
+Application.Calculation = xlCalculationManual
+Application.ScreenUpdating = False
+Application.EnableEvents = False
+Application.StatusBar = False
+
+Workbooks.Open ("\\erufls01\Share\DISTRIBUTION_FOR_SHARE\SALES ANALYSIS\DailySales\00 Master Data\1.xls")
+ActiveWorkbook.Sheets(1).Columns("A:X").Copy
+Workbooks("sap sell-in.xlsm").Sheets(1).Cells(1, 1).PasteSpecial
+Workbooks("1.xls").Close SaveChanges:=False
+
+ActiveWorkbook.Sheets(1).Name = "sap_sell-in"
+    
+Dim refund As Integer
+    refund = -1
+
+LastRow = ActiveWorkbook.Sheets("sap_sell-in").Cells(Rows.Count, 4).End(xlUp).Row
+    
+    For i = LastRow To 2 Step -1
+        If Cells(i, 20) = "Z056" Then
+            Cells(i, 13) = Cells(i, 13).Value * refund
+            Cells(i, 15) = Cells(i, 15).Value * refund
+            Cells(i, 17) = Cells(i, 17).Value * refund
+            Cells(i, 18) = Cells(i, 18).Value * refund
+        ElseIf Cells(i, 20) = "Z074" Or Cells(i, 20) = "Z090" Then
+            Rows(i).EntireRow.Delete
+        End If
+    Next i
+    
+UserMonthBegin = Format(InputBox("Введите первый день отчетного месяца в формате DD.MM.YYYY"), "General Number")
+UserMonthEnd = Format(InputBox("Введите последний день отчетного месяца в формате DD.MM.YYYY"), "General Number")
+    
+    For d = LastRow To 2 Step -1
+        If Format(Cells(d, 1), "General Number") < UserMonthBegin Then
+                Rows(d).EntireRow.Delete
+            ElseIf Format(Cells(d, 1), "General Number") > UserMonthEnd Then
+                Rows(d).EntireRow.Delete
+            ElseIf Cells(d, 1) = "" Then
+                Rows(d).EntireRow.Delete
+        End If
+    Next d
+    
+LastRow_new = ActiveWorkbook.Sheets("sap_sell-in").Cells(Rows.Count, 4).End(xlUp).Row
+
+    For Row = 2 To LastRow_new
+        If Cells(Row, 1) <> "" And Cells(Row, 19) = "USD" Then
+             HTML = GetHTML("https://www.cbr.ru/currency_base/daily/?UniDbQuery.Posted=True&UniDbQuery.To=" & Cells(Row, 1))
+             temp_start = InStr(1, HTML, "<td>Доллар США")
+                 If temp_start > 0 Then
+                     temp2 = Mid(HTML, temp_start, 100)
+                     dol_start = InStr(1, temp2, "Доллар США</td>") + 31
+                     dol_end = InStr(1, temp2, "</tr>") - 15
+                     dol = Mid(temp2, dol_start, dol_end - dol_start)
+                     Cells(Row, 28) = dol
+                     Cells(Row, 28) = Cells(Row, 28) / 10000
+                 Else:
+                     Cells(Row, 28).Value = "not found"
+                 End If
+            ElseIf Cells(Row, 1) = "" And Cells(Row, 19) = "USD" Then
+                HTML = GetHTML("http://www.cbr.ru/currency_base/daily/?date_req=" & Cells(Row, 2))
+             temp_start = InStr(1, HTML, "<td>Доллар США")
+                 If temp_start > 0 Then
+                     temp2 = Mid(HTML, temp_start, 100)
+                     dol_start = InStr(1, temp2, "Доллар США</td>") + 27
+                     dol_end = InStr(1, temp2, "</tr>") - 11
+                     dol = Mid(temp2, dol_start, dol_end - dol_start)
+                     Cells(Row, 28) = dol
+                     Cells(Row, 28) = Cells(Row, 28) / 10000
+                 Else:
+                     Cells(Row, 28).Value = "not found"
+                 End If
+            Else:
+                Cells(Row, 28) = "1"
+        End If
+    Next Row
+    
+Cells(1, 25) = "Client_Name_for_Sell_in"
+Cells(1, 26) = "Order/Fact"
+Cells(1, 27) = "ENG_name"
+Cells(1, 28) = "CB_Exchange_Rate"
+
+    For m = 2 To LastRow_new
+        Cells(m, 25) = Cells(m, 4) & Cells(m, 5) & Cells(m, 6)
+        Cells(m, 10).Replace What:="M", Replacement:=""
+        Format (GeneralNumber = Cells(m, 15))
+        Format (GeneralNumber = Cells(m, 18))
+        Format (GeneralNumber = Cells(m, 24))
+        Cells(m, 15) = Cells(m, 15).Value * Cells(m, 28).Value
+        Cells(m, 18) = Cells(m, 18).Value * Cells(m, 28).Value
+        Cells(m, 19) = "RUR"
+        If Cells(m, 1) = "" Then
+                Cells(m, 26) = "Order"
+            Else: Cells(m, 26) = "Fact"
+        End If
+    Next m
+    
+    For d = 2 To LastRow_new
+        If Cells(d, 26) = "Order" Then
+            Cells(d, 17) = Cells(d, 13)
+            Cells(d, 18) = Cells(d, 15)
+        End If
+    Next d
+    Cells(1, 17) = " Sell-in, Units"
+    Cells(1, 18) = " Sell-in, RUR"
+    
+Application.Calculation = xlCalculationAutomatic
+Workbooks.Open ("\\erufls01\Share\DISTRIBUTION_FOR_SHARE\SALES ANALYSIS\DailySales\00 Master Data\Master_data_Clients.xlsx")
+Workbooks.Open ("\\erufls01\Share\DISTRIBUTION_FOR_SHARE\SALES ANALYSIS\DailySales\00 Master Data\MasterDataProduct for NEON.xlsx")
+Workbooks("sap sell-in.xlsm").Activate
+
+    Columns(13).EntireColumn.Delete
+    Columns(14).EntireColumn.Delete
+        Cells(1, 27) = "Type_of_clients"
+        Cells(1, 28) = "Direct/Indirect"
+        Cells(1, 29) = "Region"
+        Cells(1, 30) = "Subject_English"
+        Cells(1, 31) = "City"
+        Cells(1, 32) = "ASM_name"
+            Cells(2, 25) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,2,FALSE)"
+            Cells(2, 27) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,3,FALSE)"
+            Cells(2, 28) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,4,FALSE)"
+            Cells(2, 29) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,5,FALSE)"
+            Cells(2, 30) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,6,FALSE)"
+            Cells(2, 31) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,9,FALSE)"
+            Cells(2, 32) = "=VLOOKUP(W2,[Master_data_Clients.xlsx]Customers!$A:$K,10,FALSE)"
+        Cells(1, 33) = "Category"
+        Cells(1, 34) = "SubCategory1"
+        Cells(1, 35) = "SubCetegory2"
+        Cells(1, 36) = "BrandGroup"
+        Cells(1, 37) = "SubBrandGroup"
+        Cells(1, 38) = "SKU_name_Eng"
+            Cells(2, 33) = "=VLOOKUP(J2,'[MasterDataProduct for NEON.xlsx]Sheet2'!$A:$K,6,FALSE)"
+            Cells(2, 34) = "=VLOOKUP(J2,'[MasterDataProduct for NEON.xlsx]Sheet2'!$A:$K,7,FALSE)"
+            Cells(2, 35) = "=VLOOKUP(J2,'[MasterDataProduct for NEON.xlsx]Sheet2'!$A:$K,8,FALSE)"
+            Cells(2, 36) = "=VLOOKUP(J2,'[MasterDataProduct for NEON.xlsx]Sheet2'!$A:$K,9,FALSE)"
+            Cells(2, 37) = "=VLOOKUP(J2,'[MasterDataProduct for NEON.xlsx]Sheet2'!$A:$K,10,FALSE)"
+            Cells(2, 38) = "=VLOOKUP(J2,'[MasterDataProduct for NEON.xlsx]Sheet2'!$A:$K,11,FALSE)"
+            
+    ActiveWorkbook.Sheets(1).Range("Y2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("Y2:Y" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AA2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AA2:AA" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AB2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AB2:AB" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AC2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AC2:AC" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AD2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AD2:AD" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AE2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AE2:AE" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AF2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AF2:AF" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AG2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AG2:AG" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AH2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AH2:AH" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AI2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AI2:AI" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AJ2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AJ2:AJ" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AK2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AK2:AK" & LastRow_new)
+    ActiveWorkbook.Sheets(1).Range("AL2").AutoFill Destination:=ActiveWorkbook.Sheets(1).Range("AL2:AL" & LastRow_new)
+    
+  Workbooks.Open ("\\erufls01\Share\DISTRIBUTION_FOR_SHARE\SALES ANALYSIS\DailySales\00 Master Data\DailyReport Neon.xlsm")
+  
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(2).Insert Shift:=xlToRight
+    
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 2) = "Region"
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 3) = "ASM_name"
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 4) = "Subject_English"
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 5) = "City"
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 6) = "Type_of_clients"
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 7) = "Direct/Indirect"
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 8) = "ENG_name"
+    
+            ActiveWorkbook.Sheets(6).Cells(2, 2) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,5,FALSE)"
+            ActiveWorkbook.Sheets(6).Cells(2, 3) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,10,FALSE)"
+            ActiveWorkbook.Sheets(6).Cells(2, 4) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,6,FALSE)"
+            ActiveWorkbook.Sheets(6).Cells(2, 5) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,9,FALSE)"
+            ActiveWorkbook.Sheets(6).Cells(2, 6) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,3,FALSE)"
+            ActiveWorkbook.Sheets(6).Cells(2, 7) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,4,FALSE)"
+            ActiveWorkbook.Sheets(6).Cells(2, 8) = "=VLOOKUP(A2,[Master_data_Clients.xlsx]Customers!$A:$K,2,FALSE)"
+            
+  LastRow_SILY = Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(Rows.Count, 1).End(xlUp).Row
+  LastColumn_SILY = Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, Columns.Count).End(xlToLeft).Column
+  
+                ActiveWorkbook.Sheets(6).Range("B2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("B2:B" & LastRow_SILY)
+                ActiveWorkbook.Sheets(6).Range("C2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("C2:C" & LastRow_SILY)
+                ActiveWorkbook.Sheets(6).Range("D2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("D2:D" & LastRow_SILY)
+                ActiveWorkbook.Sheets(6).Range("E2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("E2:E" & LastRow_SILY)
+                ActiveWorkbook.Sheets(6).Range("F2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("F2:F" & LastRow_SILY)
+                ActiveWorkbook.Sheets(6).Range("G2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("G2:G" & LastRow_SILY)
+                ActiveWorkbook.Sheets(6).Range("H2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("H2:H" & LastRow_SILY)
+  
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Columns(9).Insert Shift:=xlToRight
+    Workbooks("DailyReport Neon.xlsm").Sheets(6).Cells(1, 9) = "Category"
+        ActiveWorkbook.Sheets(6).Cells(2, 9) = "=INDEX('[MasterDataProduct for NEON.xlsx]Product Hierarhy'!$A:$E,MATCH(K2,'[MasterDataProduct for NEON.xlsx]Product Hierarhy'!$E:$E,0),1)"
+        ActiveWorkbook.Sheets(6).Range("I2").AutoFill Destination:=ActiveWorkbook.Sheets(6).Range("I2:I" & LastRow_SILY)
+    LastRow_for_LY = Workbooks("sap sell-in.xlsm").Sheets(1).Cells(Rows.Count, 4).End(xlUp).Row + 1
+    
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 6), Cells(LastRow_SILY, 7)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AA" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 2), Cells(LastRow_SILY, 2)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AC" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 4), Cells(LastRow_SILY, 4)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AD" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 5), Cells(LastRow_SILY, 5)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AE" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 9), Cells(LastRow_SILY, 9)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AG" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 10), Cells(LastRow_SILY, 10)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AJ" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 11), Cells(LastRow_SILY, 11)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AK" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 3), Cells(LastRow_SILY, 3)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("AF" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 8), Cells(LastRow_SILY, 8)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("Y" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 12), Cells(LastRow_SILY, 12)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("X" & LastRow_for_LY).PasteSpecial xlPasteValues
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Activate
+        Workbooks("DailyReport Neon.xlsm").Sheets(6).Range(Cells(2, 13), Cells(LastRow_SILY, 14)).Copy
+        Workbooks("sap sell-in.xlsm").Sheets(1).Range("O" & LastRow_for_LY).PasteSpecial xlPasteValues
+
+
+Application.ScreenUpdating = True
+Application.EnableEvents = True
+Application.StatusBar = True
+
+Workbooks("Master_data_Clients.xlsx").Close SaveChanges:=False
+Workbooks("MasterDataProduct for NEON.xlsx").Close SaveChanges:=False
+Workbooks("DailyReport Neon.xlsm").Close SaveChanges:=False
+
+    LastRow_for_Order = ActiveWorkbook.Sheets("sap_sell-in").Cells(Rows.Count, 15).End(xlUp).Row + 1
+    OrderRow = ActiveWorkbook.Sheets("sap_sell-in").Rows(2).EntireRow.Copy
+    Workbooks("sap sell-in.xlsm").Sheets("sap_sell-in").Range("A" & LastRow_for_Order).PasteSpecial xlPasteValues
+    Workbooks("sap sell-in.xlsm").Sheets("sap_sell-in").Cells(LastRow_for_Order, 15) = 0
+    Workbooks("sap sell-in.xlsm").Sheets("sap_sell-in").Cells(LastRow_for_Order, 16) = 0
+    Workbooks("sap sell-in.xlsm").Sheets("sap_sell-in").Cells(LastRow_for_Order, 24) = "Order"
+
+MsgBox ("Done")
+End Sub
