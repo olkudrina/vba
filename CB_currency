@@ -38,3 +38,4 @@ LastRow_new = ActiveWorkbook.Sheets("sap_sell-in").Cells(Rows.Count, 4).End(xlUp
                 Cells(Row, 28) = "1"
         End If
     Next Row
+End Sub
