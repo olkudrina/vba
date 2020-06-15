@@ -1,0 +1,46 @@
+Sub import()
+
+Dim connection As New ADODB.connection
+Dim rec_set As New ADODB.Recordset
+        
+        ConnectionString = "Provider = Microsoft.ACE.OLEDB.16.0; Data Source = C:\Users\okudrina\Desktop\off-take\monthly off-take.accdb; Jet OLEDB:Database;"
+        
+        connection.Open ConnectionString
+        
+        sql_request = "Select * from months"
+        'MsgBox (connection)
+        rec_set.Open "months", connection, adOpenKeyset, adLockOptimistic, adCmdTable
+        
+        'ActiveWorkbook.Sheets(3).UsedRange.CopyFromRecordset rec_set
+        LastRow = ActiveWorkbook.Sheets(1).Cells(Rows.Count, 1).End(xlUp).Row
+        
+        For i = 2 To LastRow
+            With rec_set
+                .AddNew
+                .Fields("Client") = ActiveWorkbook.Sheets(1).Cells(i, 1)
+                .Fields("Banner") = ActiveWorkbook.Sheets(1).Cells(i, 2)
+                .Fields("StoreFormat") = ActiveWorkbook.Sheets(1).Cells(i, 3)
+                .Fields("Division") = ActiveWorkbook.Sheets(1).Cells(i, 4)
+                .Fields("Area") = ActiveWorkbook.Sheets(1).Cells(i, 5)
+                .Fields("Region") = ActiveWorkbook.Sheets(1).Cells(i, 6)
+                .Fields("Oblast") = ActiveWorkbook.Sheets(1).Cells(i, 7)
+                .Fields("City") = ActiveWorkbook.Sheets(1).Cells(i, 8)
+                .Fields("grpname") = ActiveWorkbook.Sheets(1).Cells(i, 9)
+                .Fields("grpname2") = ActiveWorkbook.Sheets(1).Cells(i, 10)
+                .Fields("type") = ActiveWorkbook.Sheets(1).Cells(i, 11)
+                .Fields("brand") = ActiveWorkbook.Sheets(1).Cells(i, 12)
+                .Fields("lname") = ActiveWorkbook.Sheets(1).Cells(i, 13)
+                .Fields("xname") = ActiveWorkbook.Sheets(1).Cells(i, 14)
+                .Fields("usermonth") = ActiveWorkbook.Sheets(1).Cells(i, 15)
+                .Fields("useryear") = ActiveWorkbook.Sheets(1).Cells(i, 16)
+                .Fields("salesitem") = ActiveWorkbook.Sheets(1).Cells(i, 17)
+                .Fields("OffTake") = ActiveWorkbook.Sheets(1).Cells(i, 18)
+                .Fields("SellOut") = ActiveWorkbook.Sheets(1).Cells(i, 19)
+                .Update
+            End With
+        Next i
+
+connection.Close
+MsgBox ("Done")
+            
+End Sub
