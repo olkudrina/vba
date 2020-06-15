@@ -1,0 +1,18 @@
+Sub Matrices()
+
+    LastRow = ActiveWorkbook.Sheets("product").Cells(Rows.Count, 1).End(xlUp).Row
+    LastColumn = ActiveWorkbook.Sheets("product").Cells(1, Columns.Count).End(xlToLeft).Column
+    
+    For i = 2 To LastRow
+        For m = 2 To LastColumn
+            If ActiveWorkbook.Sheets("product").Cells(i, m) = 1 Then
+                ActiveWorkbook.Sheets("product").Cells(i, 102) = ActiveWorkbook.Sheets("product").Cells(i, 102) & " " & ActiveWorkbook.Sheets("product").Cells(1, m)
+            End If
+        Next m
+    Next i
+    
+For i = 101 To 3 Step -1
+    Columns(i).EntireColumn.Delete
+Next i
+    
+End Sub
