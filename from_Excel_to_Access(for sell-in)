@@ -1,0 +1,84 @@
+Sub Access_export()
+
+ActiveWorkbook.Sheets.Add After:=Sheets(2)
+ActiveWorkbook.Sheets(3).Name = "Access export"
+ActiveWorkbook.Sheets(2).UsedRange.Copy
+ActiveWorkbook.Sheets(3).Range("A1").PasteSpecial (xlValues)
+ActiveWorkbook.Sheets(3).Rows(1).EntireRow.Delete
+ActiveWorkbook.Sheets(3).Columns(13).EntireColumn.Delete
+ActiveWorkbook.Sheets(3).Columns(13).EntireColumn.Delete
+
+    LastRow = ActiveWorkbook.Sheets(3).Cells(Rows.Count, 1).End(xlUp).Row
+    
+    For i = LastRow To 2 Step -1
+        If Cells(i, 12) = "" Then
+            Rows(i).EntireRow.Delete
+        End If
+    Next i
+
+LastRow2 = ActiveWorkbook.Sheets(3).Cells(Rows.Count, 1).End(xlUp).Row
+
+UserMonth = InputBox("Введите месяц, за который загружаете данные, в формате ММ", Title)
+UserQuarter = InputBox("Введите квартал, за который загружаете данные, в формате QQ", Title)
+UserYear = InputBox("Введите год, за который загружаете данные, в формате YYYY", Title)
+
+ActiveWorkbook.Sheets(3).Cells(1, 13) = "Month"
+For i = LastRow2 To 2 Step -1
+    Cells(i, 13) = UserMonth
+Next i
+
+ActiveWorkbook.Sheets(3).Cells(1, 14) = "Quarter"
+For i = LastRow2 To 2 Step -1
+    Cells(i, 14) = UserQuarter
+Next i
+
+ActiveWorkbook.Sheets(3).Cells(1, 15) = "Year"
+For i = LastRow2 To 2 Step -1
+    Cells(i, 15) = UserYear
+Next i
+
+For i = 1 To LastRow2
+    Cells(i, 1).NumberFormat = "@"
+Next i
+
+    LastColumn = ActiveWorkbook.Sheets(3).Cells(1, Columns.Count).End(xlToLeft).Column
+    
+    
+ConnectionString = "Provider = Microsoft.ACE.OLEDB.16.0; Data Source = \\erufls01\Share\DISTRIBUTION_FOR_SHARE\SALES ANALYSIS\DailySales\00 Master Data\MPR database.accdb; Jet OLEDB:Database;"
+MsgBox (ConnectionString)
+Dim connection As New ADODB.connection
+Dim rec_set As New ADODB.recordset
+
+connection.Open ConnectionString
+
+sql_request = "Select * from Current_year_sell_in"
+MsgBox (connection)
+rec_set.Open "Current_year_sell_in", connection, adOpenKeyset, adLockOptimistic, adCmdTable
+
+For i = 2 To LastRow2
+    With rec_set
+        .AddNew
+        .Fields("Region") = ActiveWorkbook.Sheets(3).Cells(i, 1)
+        .Fields("ASM") = ActiveWorkbook.Sheets(3).Cells(i, 2)
+        .Fields("Subject_english") = ActiveWorkbook.Sheets(3).Cells(i, 3)
+        .Fields("City") = ActiveWorkbook.Sheets(3).Cells(i, 4)
+        .Fields("Type of Clients") = ActiveWorkbook.Sheets(3).Cells(i, 5)
+        .Fields("Direct|Indirect") = ActiveWorkbook.Sheets(3).Cells(i, 6)
+        .Fields("Eng_name") = ActiveWorkbook.Sheets(3).Cells(i, 7)
+        .Fields("Category") = ActiveWorkbook.Sheets(3).Cells(i, 8)
+        .Fields("BrandGroup") = ActiveWorkbook.Sheets(3).Cells(i, 9)
+        .Fields("SubBrandGroup") = ActiveWorkbook.Sheets(3).Cells(i, 10)
+        .Fields("Measure") = ActiveWorkbook.Sheets(3).Cells(i, 11)
+        .Fields("Fact") = ActiveWorkbook.Sheets(3).Cells(i, 12)
+        .Fields("_month") = ActiveWorkbook.Sheets(3).Cells(i, 13)
+        .Fields("_quarter") = ActiveWorkbook.Sheets(3).Cells(i, 14)
+        .Fields("_year") = ActiveWorkbook.Sheets(3).Cells(i, 15)
+        .Update
+    End With
+Next i
+
+connection.Close
+
+MsgBox ("Done")
+    
+End Sub
