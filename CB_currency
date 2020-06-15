@@ -1,0 +1,40 @@
+Function GetHTML(url As String) As String
+    With CreateObject("MSXML2.XMLHTTP")
+        .Open "GET", url, False
+        .send
+        GetHTML = .responseText
+    End With
+End Function
+Sub Daily_report()
+LastRow_new = ActiveWorkbook.Sheets("sap_sell-in").Cells(Rows.Count, 4).End(xlUp).Row
+    For Row = 2 To LastRow_new
+        If Cells(Row, 1) <> "" And Cells(Row, 19) = "USD" Then
+             HTML = GetHTML("http://www.cbr.ru/currency_base/daily/?UniDbQuery.Posted=True&UniDbQuery.To=" & Cells(Row, 1))
+             temp_start = InStr(1, HTML, "<td>Доллар США")
+                 If temp_start > 0 Then
+                     temp2 = Mid(HTML, temp_start, 100)
+                     dol_start = InStr(1, temp2, "Доллар США</td>") + 31
+                     dol_end = InStr(1, temp2, "</tr>") - 15
+                     dol = Mid(temp2, dol_start, dol_end - dol_start)
+                     Cells(Row, 28) = dol
+                     Cells(Row, 28) = Cells(Row, 28) / 10000
+                 Else:
+                     Cells(Row, 28).Value = "not found"
+                 End If
+            ElseIf Cells(Row, 1) = "" And Cells(Row, 19) = "USD" Then
+                HTML = GetHTML("http://www.cbr.ru/currency_base/daily/?UniDbQuery.Posted=True&UniDbQuery.To=" & Cells(Row, 2))
+             temp_start = InStr(1, HTML, "<td>Доллар США")
+                 If temp_start > 0 Then
+                     temp2 = Mid(HTML, temp_start, 100)
+                     dol_start = InStr(1, temp2, "Доллар США</td>") + 31
+                     dol_end = InStr(1, temp2, "</tr>") - 15
+                     dol = Mid(temp2, dol_start, dol_end - dol_start)
+                     Cells(Row, 28) = dol
+                     Cells(Row, 28) = Cells(Row, 28) / 10000
+                 Else:
+                     Cells(Row, 28).Value = "not found"
+                 End If
+            Else:
+                Cells(Row, 28) = "1"
+        End If
+    Next Row
