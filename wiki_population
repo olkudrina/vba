@@ -1,0 +1,33 @@
+Function GetHTML(url As String) As String
+    With CreateObject("MSXML2.XMLHTTP")
+        .Open "GET", url, False
+        .send
+        GetHTML = .responseText
+    End With
+End Function
+Sub City_Population()
+
+last_row = Cells(Rows.Count, 1).End(xlUp).Row
+
+Application.ScreenUpdating = False
+
+For Row = 4069 To last_row
+        HTML = GetHTML("https://ru.wikipedia.org/wiki/" & Cells(Row, 1))
+        temp_start = InStr(1, HTML, "P1082", vbBinaryCompare)
+        If temp_start > 0 Then
+            temp2 = Mid(HTML, temp_start, 200)
+            pop_start = InStr(1, temp2, "</span>", vbBinaryCompare) + 7
+            pop_end = InStr(1, temp2, "<sup", vbBinaryCompare)
+            pop = Mid(temp2, pop_start, pop_end - pop_start)
+            pop = Replace(pop, "&#160;", "")
+            Cells(Row, 3).Value = pop
+        Else:
+            Cells(Row, 3).Value = "not found"
+        End If
+        
+        Application.StatusBar = Row & " / " & last_row
+Next Row
+
+Application.ScreenUpdating = True
+
+End Sub
