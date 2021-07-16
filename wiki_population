@@ -11,7 +11,7 @@ last_row = Cells(Rows.Count, 1).End(xlUp).Row
 
 Application.ScreenUpdating = False
 
-For Row = 4069 To last_row
+For Row = 2 To last_row
         HTML = GetHTML("https://ru.wikipedia.org/wiki/" & Cells(Row, 1))
         temp_start = InStr(1, HTML, "P1082", vbBinaryCompare)
         If temp_start > 0 Then
