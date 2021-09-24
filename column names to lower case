@@ -1,0 +1,34 @@
+Sub lower()
+
+Dim FilesToOpen
+Dim x As Integer
+Dim LastCol As Integer
+Dim SheetsNum As Integer
+
+Application.ScreenUpdating = False
+    
+FilesToOpen = Application.GetOpenFilename _
+        (FileFilter:="Microsoft Excel Files (*.xlsx), *.xlsx", _
+        MultiSelect:=True, Title:="Files to correct")
+        
+    If TypeName(FilesToOpen) = "Boolean" Then
+        MsgBox ("You haven't chosen any file")
+    End If
+
+    x = 1
+    While x <= UBound(FilesToOpen)
+        Set openWb = Workbooks.Open(Filename:=FilesToOpen(x))
+        SheetsNum = openWb.Sheets.Count
+        For s = 1 To SheetsNum:
+            openWb.Sheets(s).Cells(1, 1).EntireRow.Insert
+            LastCol = openWb.Sheets(s).Cells(2, Columns.Count).End(xlToLeft).Column
+            For i = 1 To LastCol:
+                openWb.Sheets(s).Cells(1, i) = LCase(openWb.Sheets(s).Cells(2, i))
+            Next i
+            openWb.Sheets(s).Rows(2).EntireRow.Delete
+        Next s
+        openWb.Close SaveChanges:=True
+        x = x + 1
+    Wend
+    
+End Sub
